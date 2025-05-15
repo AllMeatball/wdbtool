@@ -30,3 +30,6 @@
 You should be able to run the script like this in a terminal:
 
 `python wdbtool.py [wdb_path]`
+
+## Acknowledgments
+* This uses some structs based off of the [Lego Island Decomp Project](https://github.com/isledecomp/isle)
