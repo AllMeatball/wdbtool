@@ -33,7 +33,8 @@ undefined2 = Int16sl
 undefined4 = Int32sl
 
 ModelDbModel = Struct(
-	"ModelName"       / PascalString(Int32ul, "ascii"),
+	"ModelNameLen"    / Int32ul,
+	"ModelName"       / PaddedString(this.ModelNameLen, "ascii"),
 
 	"ModelDataLength" / Int32ul,
 	"ModelDataOffset" / Int32ul,
@@ -48,13 +49,15 @@ ModelDbModel = Struct(
 
 
 ModelDbPart = Struct(
-	"RoiName"        / PascalString(Int32ul, "ascii"),
+	"RoiNameLen"     / Int32ul,
+	"RoiName"        / PaddedString(this.RoiNameLen, "ascii"),
 	"PartDataLength" / undefined4,
 	"PartDataOffset" / undefined4,
 )
 
 ModelDbWorld = Struct(
-	"WorldName"    / PascalString(Int32sl, "ascii"),
+	"WorldNameLen" / Int32sl,
+	"WorldName"    / PaddedString(this.WorldNameLen, "ascii"),
 
 	"NumParts"     / Int32sl,
 	"PartList"     / Array(this.NumParts, ModelDbPart),
