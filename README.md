@@ -29,7 +29,11 @@
 ## Running
 You should be able to run the script like this in a terminal:
 
-`python wdbtool.py [wdb_path]`
+`python wdbtool.py [action] [filename]`
+
+### Actions
+The currently possible actions are...
+* list - List all data in the .WDB file
 
 ## Acknowledgments
 * This uses some structs based off of the [Lego Island Decomp Project](https://github.com/isledecomp/isle)
