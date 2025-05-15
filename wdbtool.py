@@ -23,10 +23,6 @@
 import argparse
 from construct import *
 
-parser = argparse.ArgumentParser()
-parser.add_argument('wdb_path')
-args = parser.parse_args()
-
 Vec3 = Array(3, Float32l)
 undefined = Byte
 undefined2 = Int16sl
@@ -67,10 +63,24 @@ ModelDbWorld = Struct(
 	# "m_unk0x34"    / Array(0x08, undefined),
 )
 
-ModelDbFile = Struct(
+WorldDbFile = Struct(
 	"NumWorlds" / Int32sl,
 	"Worlds"    / Array(this.NumWorlds, ModelDbWorld),
 )
 
-result = ModelDbFile.parse_file(args.wdb_path)
-print(result.Worlds)
+def ACTION_list(args):
+	result = WorldDbFile.parse_file(args.filename)
+	print(result)
+
+ACTIONS = {
+	'list': ACTION_list
+}
+
+parser = argparse.ArgumentParser()
+parser.add_argument('action', help='Allowed actions: ' + ', '.join(ACTIONS))
+parser.add_argument('filename')
+args = parser.parse_args()
+
+assert(args.action in ACTIONS)
+ACTIONS[args.action](args)
+
