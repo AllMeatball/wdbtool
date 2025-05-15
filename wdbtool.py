@@ -37,6 +37,7 @@ ModelDbModel = Struct(
 
 	"ModelDataLength" / Int32ul,
 	"ModelDataOffset" / Int32ul,
+	"ModelData"       / Pointer(this.ModelDataOffset, Bytes(this.ModelDataLength)),
 
 	"PresenterName"    / PascalString(Int32ul, "ascii"),
 	"Location"         / Vec3,
@@ -51,6 +52,7 @@ ModelDbPart = Struct(
 	"RoiName"        / PascalString(Int32ul, "ascii"),
 	"PartDataLength" / undefined4,
 	"PartDataOffset" / undefined4,
+	"PartData"       / Pointer(this.PartDataOffset, Bytes(this.PartDataLength)),
 )
 
 ModelDbWorld = Struct(
