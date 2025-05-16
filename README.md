@@ -34,7 +34,7 @@ You should be able to run the script like this in a terminal:
 ### Actions
 The currently possible actions are...
 * list - List all data in the .WDB file
-* export - Export data to .json and .bin files (creates a WDB path in the target folder
+* export - Export data to .json and .bin files (creates a WDB path in the target folder)
 * world-names - List all world names
 
 ## Acknowledgments
