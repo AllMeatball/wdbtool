@@ -20,6 +20,8 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import os
+import json
 import argparse
 from construct import *
 
@@ -55,7 +57,7 @@ ModelDbWorld = Struct(
 	"WorldName"    / PascalString(Int32sl, "ascii"),
 
 	"NumParts"     / Int32sl,
-	"PartList"     / Array(this.NumParts, ModelDbPart),
+	"Parts"        / Array(this.NumParts, ModelDbPart),
 
 	"NumModels"    / Int32ul,
 	"Models"       / Array(this.NumModels, ModelDbModel),
@@ -68,16 +70,87 @@ WorldDbFile = Struct(
 	"Worlds"    / Array(this.NumWorlds, ModelDbWorld),
 )
 
+def export_to_folder(root, filename, data):
+	fullpath = os.path.join(root, filename)
+	fullpath_dir = os.path.dirname(fullpath)
+
+	os.makedirs(fullpath_dir, exist_ok=True)
+
+	with open(fullpath, 'wb') as fp:
+		fp.write(data)
+
+def export_part(part):
+	filename = part.RoiName.strip('\x00')+'.bin'
+	path = os.path.join('parts', filename)
+
+	return path, part.PartData
+
+def export_model(model):
+	filename = model.ModelName.strip('\x00')+'.bin'
+	path = os.path.join('models', filename)
+
+	return path, model.ModelData
+
+def export_model_metadata(model):
+	filename = model.ModelName.strip('\x00')+'.json'
+	path = os.path.join('models', filename)
+
+	metadata = {
+		"PresenterName": model.PresenterName.strip('\x00'),
+		"Location": model.Location,
+		"Direction": model.Direction,
+		"Up": model.Up,
+		'm_unk0x34': model.m_unk0x34,
+	}
+
+	return path, json.dumps(metadata, indent=4).encode('utf-8')
+
+def export_world(export_path, world):
+	root_path = os.path.join(export_path, 'WDB', world.WorldName.strip('\x00'))
+
+	for model in world.Models:
+		filename, data = export_model(model)
+		export_to_folder( root_path, filename, data )
+
+		# export metadata
+		filename, data = export_model_metadata(model)
+		export_to_folder( root_path, filename, data )
+
+
+	for part in world.Parts:
+		filename, data = export_part(part)
+		export_to_folder( root_path, filename, data )
+
+# List all data in the .WDB file
 def ACTION_list(args):
-	result = WorldDbFile.parse_file(args.filename)
-	print(result)
+	wdb = WorldDbFile.parse_file(args.filename)
+	print(wdb)
+
+
+# Export data to .json and .bin files (creates a WDB path in the target folder)
+def ACTION_export(args):
+	assert(args.output)
+	wdb = WorldDbFile.parse_file(args.filename)
+
+	for world in wdb.Worlds:
+		export_world(args.output, world)
+
+# List all world names
+def ACTION_world_names(args):
+	wdb = WorldDbFile.parse_file(args.filename)
+
+	for world in wdb.Worlds:
+		print(world.WorldName)
 
 ACTIONS = {
-	'list': ACTION_list
+	'list': ACTION_list,
+	'export': ACTION_export,
+	'world-names': ACTION_world_names,
 }
 
 parser = argparse.ArgumentParser()
 parser.add_argument('action', help='Allowed actions: ' + ', '.join(ACTIONS))
+parser.add_argument('-o', '--output', help='Output path for export')
 parser.add_argument('filename')
 args = parser.parse_args()
 
