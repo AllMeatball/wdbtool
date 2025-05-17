@@ -4,6 +4,8 @@ import json
 from construct import *
 from PIL import Image
 
+from .export_process import ExportProcess
+
 Vec3 = Array(3, Float32l)
 undefined = Byte
 undefined2 = Int16sl
@@ -88,77 +90,85 @@ WorldDbFile = Struct(
 	"Worlds"    / Array(this.NumWorlds, ModelDbWorld),
 )
 
-def export_to_folder(root, filename, data):
-	fullpath = os.path.join(root, filename)
-	fullpath_dir = os.path.dirname(fullpath)
+def export_to_folder(root, *exporters):
+	for exporter in exporters:
+		for dirpath in exporter.dirs:
+			dirpath_full = os.path.join(root, dirpath)
+			os.makedirs(dirpath_full, exist_ok=True)
 
-	os.makedirs(fullpath_dir, exist_ok=True)
+		exporter.export(root)
 
-	with open(fullpath, 'wb') as fp:
-		fp.write(data)
+class ModelExporter(ExportProcess):
+	def __init__(self, model):
+		self.model = model
+		self.model_name = self.model.ModelName.strip('\x00')
+		self.texture_path = f'models/{self.model_name}/textures'
 
-def export_part(part):
-	filename = part.RoiName.strip('\x00')+'.bin'
-	path = os.path.join('parts', filename)
+		self.path = os.path.join('models', f'{self.model_name}.bin')
 
-	return path, part.PartData
+		self.dirs = ('models', self.texture_path)
 
-def export_model(model):
-	filename = model.ModelName.strip('\x00')+'.bin'
-	path = os.path.join('models', filename)
-	model_parse = ModelRoi.parse(model.ModelData)
+	def _export_metadata(self, root):
+		filename = os.path.join('models', f'{self.model_name}', 'extra.json')
+		metadata = {
+			"PresenterName": self.model.PresenterName.strip('\x00'),
+			"Location": self.model.Location,
+			"Direction": self.model.Direction,
+			"Up": self.model.Up,
+			"Visibility": self.model.Visibility,
+		}
 
-	for texture in model_parse.TextureInfo.Textures:
-		image_info = texture.Image
-		palette = []
+		with open(os.path.join(root, filename), 'w') as fp:
+			json.dump(metadata, fp, indent=4)
 
-		for color in image_info.Palette:
-			palette.append(color.Red)
-			palette.append(color.Green)
-			palette.append(color.Blue)
+	def export(self, root):
+		self._export_metadata(root)
 
-		im = Image.new('P', (image_info.Width, image_info.Height))
-		im.putpalette(palette)
+		model_roi = ModelRoi.parse(self.model.ModelData)
 
-		for x in range(image_info.Width):
-			for y in range(image_info.Height):
-				index = image_info.Pixels[x + y * image_info.Width]
-				im.putpixel( (x, y), index )
+		for texture in model_roi.TextureInfo.Textures:
+			image_info = texture.Image
+			palette = []
 
-		im.save(os.path.join(
-			'/tmp',
-			texture.Name
-		))
+			for color in image_info.Palette:
+				palette.append(color.Red)
+				palette.append(color.Green)
+				palette.append(color.Blue)
 
-	exit(1)
+			im = Image.new('P', (image_info.Width, image_info.Height))
+			im.putpalette(palette)
 
-	return path, model.ModelData
+			for x in range(image_info.Width):
+				for y in range(image_info.Height):
+					index = image_info.Pixels[x + y * image_info.Width]
+					im.putpixel( (x, y), index )
 
-def export_model_metadata(model):
-	filename = model.ModelName.strip('\x00')+'.json'
-	path = os.path.join('models', filename)
+			im.save(os.path.join(
+				root,
+				self.texture_path,
+				texture.Name
+			))
 
-	metadata = {
-		"PresenterName": model.PresenterName.strip('\x00'),
-		"Location": model.Location,
-		"Direction": model.Direction,
-		"Up": model.Up,
-		"Visibility": model.Visibility,
-	}
+		exit(1)
 
-	return path, json.dumps(metadata, indent=4).encode('utf-8')
+class PartExporter(ExportProcess):
+	def __init__(self, part):
+		self.part = part
+		self.path = os.path.join('parts', f'{self.part.RoiName.strip('\x00')}.bin')
+		self.dirs = ('parts')
+
+	def export(self, root):
+		with open(self.path, 'wb') as fp:
+			fp.write(self.path.PartData)
 
 def export_world(export_path, world):
 	root_path = os.path.join(export_path, 'WDB', world.WorldName.strip('\x00'))
 
+	exporters = []
 	for model in world.Models:
-		filename, data = export_model(model)
-		export_to_folder( root_path, filename, data )
-
-		# export metadata
-		filename, data = export_model_metadata(model)
-		export_to_folder( root_path, filename, data )
+		exporters.append( ModelExporter(model) )
 
 	for part in world.Parts:
-		filename, data = export_part(part)
-		export_to_folder( root_path, filename, data )
+		exporters.append( PartExporter(part) )
+
+	export_to_folder(root_path, *exporters)
