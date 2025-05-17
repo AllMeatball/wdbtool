@@ -23,12 +23,55 @@
 import os
 import json
 import argparse
+
 from construct import *
+from PIL import Image
 
 Vec3 = Array(3, Float32l)
 undefined = Byte
 undefined2 = Int16sl
 undefined4 = Int32sl
+
+MODEL_VERSION = 19
+
+RGBColor = Struct(
+	"Red"   / Int8ul,
+	"Green" / Int8ul,
+	"Blue"  / Int8ul,
+)
+
+LegoImage = Struct(
+	"Width"  / Int32ul,
+	"Height" / Int32ul,
+
+	"ColorCount" / Int32ul,
+	"Palette"    / Array(this.ColorCount, RGBColor),
+
+	"Pixels"     / Bytes(this.Width * this.Height),
+)
+
+ModelTexture = Struct(
+	"Name"  / PascalString(Int32ul, "ascii"),
+	"Image" / LegoImage
+)
+
+ModelTextureInfo = Struct(
+	"NumTextures"  / Int32ul,
+	"SkipTextures" / Int32ul,
+
+	"Textures" / IfThenElse(
+		this.SkipTextures != 1,
+		Array(this.NumTextures, ModelTexture),
+		Array(0, ModelTexture)
+	),
+)
+
+ModelRoi = Struct(
+	"Version" / Const(MODEL_VERSION, Int32ul),
+	"TextureInfoOffset" / Int32ul,
+
+	"TextureInfo" / Pointer(this.TextureInfoOffset, ModelTextureInfo),
+)
 
 ModelDbModel = Struct(
 	"ModelName"       / PascalString(Int32ul, "ascii"),
@@ -43,8 +86,6 @@ ModelDbModel = Struct(
 	"Up"               / Vec3,
 	"Visibility"       / Flag,
 )
-
-
 
 ModelDbPart = Struct(
 	"RoiName"        / PascalString(Int32ul, "ascii"),
@@ -88,6 +129,31 @@ def export_part(part):
 def export_model(model):
 	filename = model.ModelName.strip('\x00')+'.bin'
 	path = os.path.join('models', filename)
+	model_parse = ModelRoi.parse(model.ModelData)
+
+	for texture in model_parse.TextureInfo.Textures:
+		image_info = texture.Image
+		palette = []
+
+		for color in image_info.Palette:
+			palette.append(color.Red)
+			palette.append(color.Green)
+			palette.append(color.Blue)
+
+		im = Image.new('P', (image_info.Width, image_info.Height))
+		im.putpalette(palette)
+
+		for x in range(image_info.Width):
+			for y in range(image_info.Height):
+				index = image_info.Pixels[x + y * image_info.Width]
+				im.putpixel( (x, y), index )
+
+		im.save(os.path.join(
+			'/tmp',
+			texture.Name
+		))
+
+	exit(1)
 
 	return path, model.ModelData
 
@@ -115,7 +181,6 @@ def export_world(export_path, world):
 		# export metadata
 		filename, data = export_model_metadata(model)
 		export_to_folder( root_path, filename, data )
-
 
 	for part in world.Parts:
 		filename, data = export_part(part)
