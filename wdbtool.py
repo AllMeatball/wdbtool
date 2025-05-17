@@ -41,7 +41,7 @@ ModelDbModel = Struct(
 	"Location"         / Vec3,
 	"Direction"        / Vec3,
 	"Up"               / Vec3,
-	'm_unk0x34'        / undefined,
+	"Visibility"       / Flag,
 )
 
 
@@ -100,7 +100,7 @@ def export_model_metadata(model):
 		"Location": model.Location,
 		"Direction": model.Direction,
 		"Up": model.Up,
-		'm_unk0x34': model.m_unk0x34,
+		"Visibility": model.Visibility,
 	}
 
 	return path, json.dumps(metadata, indent=4).encode('utf-8')
