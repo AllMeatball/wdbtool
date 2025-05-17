@@ -3,6 +3,7 @@
 ## Prerequisites
 * Python 3.x
 * [Construct](https://construct.readthedocs.io/en/latest/index.html)
+* [Pillow](https://python-pillow.github.io/)
 
 ## Installation
 1. Download [lastest Python 3](https://www.python.org/downloads/)
@@ -17,13 +18,13 @@
    or with a package manager
    ```sh
    # Arch Linux
-   sudo pacman -S python-construct
+   sudo pacman -S python-construct python-pillow
 
    # Debian/Ubuntu
-   sudo apt-get install python3-construct
+   sudo apt-get install python3-construct python3-pillow
 
    # Fedora
-   sudo dnf install python3-construct
+   sudo dnf install python3-construct python3-pillow
    ```
 
 ## Running
