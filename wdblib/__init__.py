@@ -1,94 +1,32 @@
+# MIT License
+#
+# Copyright (c) 2025 AllMeatball
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 import os
 import json
 
-from construct import *
 from PIL import Image
 
 from .export_process import ExportProcess
-
-Vec3 = Array(3, Float32l)
-undefined = Byte
-undefined2 = Int16sl
-undefined4 = Int32sl
-
-MODEL_VERSION = 19
-
-RGBColor = Struct(
-	"Red"   / Int8ul,
-	"Green" / Int8ul,
-	"Blue"  / Int8ul,
-)
-
-LegoImage = Struct(
-	"Width"  / Int32ul,
-	"Height" / Int32ul,
-
-	"ColorCount" / Int32ul,
-	"Palette"    / Array(this.ColorCount, RGBColor),
-
-	"Pixels"     / Bytes(this.Width * this.Height),
-)
-
-ModelTexture = Struct(
-	"Name"  / PascalString(Int32ul, "ascii"),
-	"Image" / LegoImage
-)
-
-ModelTextureInfo = Struct(
-	"NumTextures"  / Int32ul,
-	"SkipTextures" / Int32ul,
-
-	"Textures" / IfThenElse(
-		this.SkipTextures != 1,
-		Array(this.NumTextures, ModelTexture),
-		Array(0, ModelTexture)
-	),
-)
-
-ModelRoi = Struct(
-	"Version" / Const(MODEL_VERSION, Int32ul),
-	"TextureInfoOffset" / Int32ul,
-
-	"TextureInfo" / Pointer(this.TextureInfoOffset, ModelTextureInfo),
-)
-
-ModelDbModel = Struct(
-	"ModelName"       / PascalString(Int32ul, "ascii"),
-
-	"ModelDataLength" / Int32ul,
-	"ModelDataOffset" / Int32ul,
-	"ModelData"       / Pointer(this.ModelDataOffset, Bytes(this.ModelDataLength)),
-
-	"PresenterName"    / PascalString(Int32ul, "ascii"),
-	"Location"         / Vec3,
-	"Direction"        / Vec3,
-	"Up"               / Vec3,
-	"Visibility"       / Flag,
-)
-
-ModelDbPart = Struct(
-	"RoiName"        / PascalString(Int32ul, "ascii"),
-	"PartDataLength" / undefined4,
-	"PartDataOffset" / undefined4,
-	"PartData"       / Pointer(this.PartDataOffset, Bytes(this.PartDataLength)),
-)
-
-ModelDbWorld = Struct(
-	"WorldName"    / PascalString(Int32sl, "ascii"),
-
-	"NumParts"     / Int32sl,
-	"Parts"        / Array(this.NumParts, ModelDbPart),
-
-	"NumModels"    / Int32ul,
-	"Models"       / Array(this.NumModels, ModelDbModel),
-
-	# "m_unk0x34"    / Array(0x08, undefined),
-)
-
-WorldDbFile = Struct(
-	"NumWorlds" / Int32sl,
-	"Worlds"    / Array(this.NumWorlds, ModelDbWorld),
-)
+from .structs import *
 
 def export_to_folder(root, *exporters):
 	for exporter in exporters:
@@ -101,12 +39,12 @@ def export_to_folder(root, *exporters):
 class ModelExporter(ExportProcess):
 	def __init__(self, model):
 		self.model = model
-		self.model_name = self.model.ModelName.strip('\x00')
+		self.model_name = self.model.Name.strip('\x00')
 		self.texture_path = f'models/{self.model_name}/textures'
 
 		self.path = os.path.join('models', f'{self.model_name}.bin')
 
-		self.dirs = ('models', self.texture_path)
+		self.dirs = ['models', self.texture_path]
 
 	def _export_metadata(self, root):
 		filename = os.path.join('models', f'{self.model_name}', 'extra.json')
@@ -124,7 +62,7 @@ class ModelExporter(ExportProcess):
 	def export(self, root):
 		self._export_metadata(root)
 
-		model_roi = ModelRoi.parse(self.model.ModelData)
+		model_roi = ModelROIList.parse(self.model.Data)
 
 		for texture in model_roi.TextureInfo.Textures:
 			image_info = texture.Image
@@ -149,26 +87,28 @@ class ModelExporter(ExportProcess):
 				texture.Name
 			))
 
-		exit(1)
+		# exit(1)
 
 class PartExporter(ExportProcess):
 	def __init__(self, part):
 		self.part = part
 		self.path = os.path.join('parts', f'{self.part.RoiName.strip('\x00')}.bin')
-		self.dirs = ('parts')
+		self.dirs = ['parts']
 
 	def export(self, root):
-		with open(self.path, 'wb') as fp:
-			fp.write(self.path.PartData)
+		part_roi = ROI.parse(self.part.Data)
+
+		# with open(os.path.join(root, self.path), 'wb') as fp:
+		# 	fp.write(self.part.PartData)
 
 def export_world(export_path, world):
-	root_path = os.path.join(export_path, 'WDB', world.WorldName.strip('\x00'))
+	root_path = os.path.join(export_path, 'WDB', world.Name.strip('\x00'))
 
 	exporters = []
 	for model in world.Models:
 		exporters.append( ModelExporter(model) )
 
-	for part in world.Parts:
-		exporters.append( PartExporter(part) )
+	# for part in world.Parts:
+	# 	exporters.append( PartExporter(part) )
 
 	export_to_folder(root_path, *exporters)

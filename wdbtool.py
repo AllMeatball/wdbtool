@@ -40,7 +40,7 @@ def ACTION_export(args):
 
 # List all world names
 def ACTION_world_names(args):
-	wdb = wdblib.wdblib.WorldDbFile.parse_file(args.filename)
+	wdb = wdblib.WorldDbFile.parse_file(args.filename)
 
 	for world in wdb.Worlds:
 		print(world.WorldName)
