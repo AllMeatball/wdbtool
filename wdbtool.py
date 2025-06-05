@@ -26,7 +26,7 @@ import wdblib
 
 # List all data in the .WDB file
 def ACTION_list(args):
-	wdb = WorldDbFile.parse_file(args.filename)
+	wdb = wdblib.WorldDbFile.parse_file(args.filename)
 	print(wdb)
 
 
