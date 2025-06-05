@@ -99,7 +99,9 @@ class PartExporter(ExportProcess):
 		self.dirs = ['parts']
 
 	def export(self, root):
-		part_roi = ROI.parse(self.part.Data)
+		part_roi = PartROIList.parse(self.part.Data)
+		print(part_roi)
+		exit(1)
 
 		# with open(os.path.join(root, self.path), 'wb') as fp:
 		# 	fp.write(self.part.PartData)
@@ -108,10 +110,10 @@ def export_world(export_path, world):
 	root_path = os.path.join(export_path, 'WDB', world.Name.strip('\x00'))
 
 	exporters = []
-	for model in world.Models:
-		exporters.append( ModelExporter(model) )
+	# for model in world.Models:
+	# 	exporters.append( ModelExporter(model) )
 
-	# for part in world.Parts:
-	# 	exporters.append( PartExporter(part) )
+	for part in world.Parts:
+		exporters.append( PartExporter(part) )
 
 	export_to_folder(root_path, *exporters)

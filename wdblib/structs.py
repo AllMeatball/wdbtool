@@ -45,6 +45,14 @@ LegoImage = Struct(
 	"Pixels"     / Bytes(this.Width * this.Height),
 )
 
+LOD = Struct(
+	"m_unk0x08" / undefined4,
+	"NumMeshes" / Int32ul,
+
+	"NumVerts" / Int16ul,
+	"NumNormals" / Int16ul,
+)
+
 WorldDbTexture = Struct(
 	"Name"  / PascalString(Int32ul, "ascii"),
 	"Image" / LegoImage
@@ -52,29 +60,16 @@ WorldDbTexture = Struct(
 
 WorldDbTextureInfo = Struct(
 	"NumTextures"  / Int32ul,
-	"SkipTextures" / Int32ul,
+	# "SkipTextures" / Int32ul,
 
-	"Textures" / IfThenElse(
-		this.SkipTextures != 1,
-		Array(this.NumTextures, WorldDbTexture),
-		Array(0, WorldDbTexture)
-	),
+	"Textures" / Array(this.NumTextures, WorldDbTexture),
 )
 
 ROI = Struct(
 	"RoiName" / PascalString(Int32ul, "ascii"),
 	"NumLODs" / Int32ul,
-	"LODs" / Int32ul
-)
-
-ModelROIList = Struct(
-	"Version" / Int32ul,
-	"TextureInfoOffset" / Int32ul,
-
-	"TextureInfo" / Pointer(this.TextureInfoOffset, WorldDbTextureInfo),
-
-	"NumROIs" / Int32ul,
-	"ROIs" / Array(this.NumROIs, ROI),
+	"RoiInfoOffset" / Int32ul,
+	"LODs"    / Array(1, LOD),
 )
 
 WorldDbModel = Struct(
@@ -91,11 +86,33 @@ WorldDbModel = Struct(
 	"Visibility"       / Flag,
 )
 
+ModelROIList = Struct(
+	"Version" / Int32ul,
+	"TextureInfoOffset" / Int32ul,
+
+	"TextureInfo" / Pointer(this.TextureInfoOffset, WorldDbTextureInfo),
+
+	"NumROIs" / Int32ul,
+	"ROIs" / Array(this.NumROIs, ROI),
+)
+
+
+
+
 WorldDbPart = Struct(
 	"RoiName"    / PascalString(Int32ul, "ascii"),
 	"DataLength" / Int32ul,
 	"DataOffset" / Int32ul,
 	"Data"       / Pointer(this.DataOffset, Bytes(this.DataLength)),
+)
+
+PartROIList = Struct(
+	"TextureInfoOffset" / Int32ul,
+
+	"TextureInfo" / Pointer(this.TextureInfoOffset, WorldDbTextureInfo),
+
+	"NumROIs" / Int32ul,
+	"ROIs" / Array(this.NumROIs, ROI),
 )
 
 WorldDbWorld = Struct(
