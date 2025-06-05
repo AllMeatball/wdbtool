@@ -36,6 +36,24 @@ def export_to_folder(root, *exporters):
 
 		exporter.export(root)
 
+def write_lego_image(lego_image: LegoImage, path: str):
+	palette = []
+
+	for color in lego_image.Palette:
+		palette.append(color.Red)
+		palette.append(color.Green)
+		palette.append(color.Blue)
+
+	im = Image.new('P', (lego_image.Width, lego_image.Height))
+	im.putpalette(palette)
+
+	for x in range(lego_image.Width):
+		for y in range(lego_image.Height):
+			index = lego_image.Pixels[x + y * lego_image.Width]
+			im.putpixel( (x, y), index )
+
+	im.save(path)
+
 class ModelExporter(ExportProcess):
 	def __init__(self, model):
 		self.model = model
@@ -65,27 +83,12 @@ class ModelExporter(ExportProcess):
 		model_roi = ModelROIList.parse(self.model.Data)
 
 		for texture in model_roi.TextureInfo.Textures:
-			image_info = texture.Image
-			palette = []
-
-			for color in image_info.Palette:
-				palette.append(color.Red)
-				palette.append(color.Green)
-				palette.append(color.Blue)
-
-			im = Image.new('P', (image_info.Width, image_info.Height))
-			im.putpalette(palette)
-
-			for x in range(image_info.Width):
-				for y in range(image_info.Height):
-					index = image_info.Pixels[x + y * image_info.Width]
-					im.putpixel( (x, y), index )
-
-			im.save(os.path.join(
-				root,
-				self.texture_path,
-				texture.Name
-			))
+			write_lego_image(texture.Image, os.path.join(
+					root,
+					self.texture_path,
+					texture.Name
+				)
+			)
 
 		# exit(1)
 
