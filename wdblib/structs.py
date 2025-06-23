@@ -23,8 +23,13 @@
 from construct import *
 
 MODEL_VERSION = 19
+U16_MAX = 2**2
 
+Vec2 = Array(2, Float32l)
 Vec3 = Array(3, Float32l)
+
+IVec3 = Array(3, Int32ul)
+
 undefined = Byte
 undefined2 = Int16sl
 undefined4 = Int32sl
@@ -45,12 +50,42 @@ LegoImage = Struct(
 	"Pixels"     / Bytes(this.Width * this.Height),
 )
 
+Mesh = Struct(
+	"NumPolys"     / Int16ul,
+	"NumVertices"  / Int16ul,
+	"PolyIndices" / Array(this.NumPolys, IVec3),
+
+	"NumTextureIndices" / Int16sl,
+	"TextureIndices" / If(this.NumTextureIndices > 0, Array(this.NumPolys, IVec3)),
+
+	# Mesh Metadata
+	"Alpha"     / Float32l,
+	"Shading"   / Int8ul,
+	"m_unk0x0d" / Int8ul,
+	"m_unk0x20" / undefined,
+	"m_unk0x21" / Int8ul,
+
+	# "TextureName"  / PascalString(Int32ul, "ascii"),
+	# "MaterialName" / PascalString(Int32ul, "ascii"),
+)
+
 LOD = Struct(
 	"m_unk0x08" / undefined4,
 	"NumMeshes" / Int32ul,
 
-	"NumVerts" / Int16ul,
-	"NumNormals" / Int16ul,
+	"NumVerts"   / Int16ul,
+	"NumNormals" / ExprAdapter(
+		Int16ul,
+		(obj_+1) >> 1,
+		obj_-1,
+	),
+	"NumUVMaps"  / Int16sl,
+
+	"Vertices" / Array(this.NumVerts, Vec3),
+	"Normals"  / If(this.NumNormals > 0, Array(this.NumNormals, Vec3)),
+	"UVMaps"   / If(this.NumUVMaps  > 0, Array(this.NumUVMaps,  Vec2)),
+
+	"Meshes" / Array(this.NumMeshes, Mesh),
 )
 
 WorldDbTexture = Struct(

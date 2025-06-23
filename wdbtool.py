@@ -43,7 +43,7 @@ def ACTION_world_names(args):
 	wdb = wdblib.WorldDbFile.parse_file(args.filename)
 
 	for world in wdb.Worlds:
-		print(world.WorldName)
+		print(world.Name)
 
 ACTIONS = {
 	'list': ACTION_list,

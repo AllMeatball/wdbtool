@@ -99,8 +99,12 @@ class PartExporter(ExportProcess):
 		self.dirs = ['parts']
 
 	def export(self, root):
-		part_roi = PartROIList.parse(self.part.Data)
-		print(part_roi)
+		part = PartROIList.parse(self.part.Data)
+		for roi in part.ROIs:
+			lod = roi.LODs[0]
+			for vert in lod.Vertices:
+				print(f'v {vert[0]:.3f} {vert[1]:.3f} {vert[2]:.3f}')
+		# print(part)
 		exit(1)
 
 		# with open(os.path.join(root, self.path), 'wb') as fp:
